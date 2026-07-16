@@ -2,90 +2,59 @@
 
 ```text
 inventory_system/
-
 │
-
-├── main.py
-
+├── .venv/
+├── .gitignore
+├── .python-version
+├── pyproject.toml
 ├── README.md
-
-├── requirements.txt
-
+├── config.py
+├── main.py
 │
-
 ├── docs/
-
-│      project_requirements.md
-
-│      use_cases.md
-
-│      class_diagram.md
-
-│      database_schema.md
-
-│      folder_structure.md
-
+│   ├── project_requirements.md
+│   ├── use_cases.md
+│   ├── class_diagram.md
+│   ├── database_schema.md
+│   └── folder_structure.md
 │
-
 ├── models/
-
-│      product.py
-
-│      customer.py
-
-│      order.py
-
-│      order_item.py
-
-│      invoice.py
-
-│      enums.py
-
+│   ├── __init__.py
+│   ├── product.py
+│   ├── customer.py
+│   ├── order.py
+│   ├── order_item.py
+│   ├── invoice.py
+│   └── enums.py
 │
-
 ├── services/
-
-│      inventory_service.py
-
-│      customer_service.py
-
-│      order_service.py
-
-│      invoice_service.py
-
-│      report_service.py
-
-│      storage_service.py
-
+│   ├── __init__.py
+│   ├── inventory_service.py
+│   ├── customer_service.py
+│   ├── order_service.py
+│   ├── invoice_service.py
+│   ├── report_service.py
+│   └── storage_service.py
 │
-
 ├── utils/
-
-│      validators.py
-
-│      helpers.py
-
-│      exceptions.py
-
-│      constants.py
-
+│   ├── __init__.py
+│   ├── validators.py
+│   ├── helpers.py
+│   ├── exceptions.py
+│   └── constants.py
 │
-
 ├── storage/
-
-│      database.json
-
+│   └── database.json
 │
-
 ├── reports/
-
+│   └── .gitkeep
 │
-
 ├── logs/
-
+│   └── .gitkeep
 │
-
 └── tests/
+    ├── __init__.py
+    └── .gitkeep
 ```
 
 ---
@@ -94,46 +63,47 @@ inventory_system/
 
 ## docs
 
-Project documentation.
+Contains all project documentation, design documents, architecture, and planning files.
 
 ---
 
 ## models
 
-Business entities.
+Contains the business entities (domain models) of the application.
 
 ---
 
 ## services
 
-Business logic.
+Implements the business logic and coordinates operations between models and storage.
 
 ---
 
 ## storage
 
-Persistent data.
+Stores application data. Version 1 uses a JSON file for persistence.
 
 ---
 
 ## utils
 
-Reusable helper functions.
-
----
-
-## tests
-
-Unit tests.
+Contains reusable utilities such as validators, constants, helper functions, and custom exceptions.
 
 ---
 
 ## reports
 
-Generated reports.
+Stores generated reports exported by the application.
 
 ---
 
 ## logs
 
-Application logs.
+Stores application log files.
+
+---
+
+## tests
+
+Contains unit and integration tests for the project.
+```
