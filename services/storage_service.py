@@ -26,3 +26,36 @@ class StorageService:
 
         with DATABASE_PATH.open("x", encoding="utf-8") as database_file:
             json.dump(self.DEFAULT_SCHEMA, database_file, indent=4, ensure_ascii=False)
+
+    def load_data(self) -> dict[str, list]:
+        """Load and validate the complete database.
+
+        Returns:
+            dict[str, list]: The validated database data.
+
+        Raises:
+            json.JSONDecodeError: If the database contains invalid JSON.
+            ValueError: If the database schema is invalid.
+            OSError: If the database cannot be opened or read.
+        """
+        if not DATABASE_PATH.exists():
+            self.initialize_database()
+
+        with DATABASE_PATH.open("r", encoding="utf-8") as database_file:
+            data = json.load(database_file)
+
+        if not isinstance(data, dict):
+            raise ValueError(
+                "Invalid database schema: top-level JSON object must be a dictionary."
+            )
+
+        expected_keys = set(self.DEFAULT_SCHEMA.keys())
+        if set(data.keys()) != expected_keys:
+            raise ValueError(
+                "Invalid database schema: unexpected or missing top-level collections."
+            )
+
+        if any(not isinstance(data[collection], list) for collection in expected_keys):
+            raise ValueError("Invalid database schema: all collections must be lists.")
+
+        return data
