@@ -17,7 +17,7 @@ class InventoryService:
             TypeError: If storage_service is not a StorageService instance.
         """
         if not isinstance(storage_service, StorageService):
-            raise TypeError(f"storage_service must be an instance of StorageService instance, "
+            raise TypeError(f"storage_service must be a StorageService instance, "
                             f"got {type(storage_service).__name__}.")
 
         self._storage_service = storage_service
@@ -29,9 +29,20 @@ class InventoryService:
             product: Product to add.
 
         Raises:
-            NotImplementedError: This interface has not been implemented yet.
+            TypeError: If product is not a Product instance.
+            ValueError: If a product with the same identifier already exists.
         """
-        raise NotImplementedError
+        if not isinstance(product, Product):
+            raise TypeError("product must be an instance of Product.")
+
+        data = self._storage_service.load_data()
+        products = data["products"]
+
+        if any(existing_product["id"] == product.id for existing_product in products):
+            raise ValueError(f"Product with ID '{product.id}' already exists.")
+
+        products.append(product.to_dict())
+        self._storage_service.save_data(data)
 
     def get_product_by_id(self, product_id: str) -> Product | None:
         """Retrieve a product by its unique identifier.
