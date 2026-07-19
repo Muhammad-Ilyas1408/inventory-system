@@ -101,6 +101,7 @@ class InventoryService:
 
         for index, existing_product in enumerate(products):
             if existing_product.get("id") == product.id:
+                product.update_timestamp()
                 products[index] = product.to_dict()
                 self._storage_service.save_data(data)
                 return
@@ -146,9 +147,35 @@ class InventoryService:
             Products that match the provided keyword.
 
         Raises:
-            NotImplementedError: This interface has not been implemented yet.
+            TypeError: If keyword is not a string.
+            ValueError: If keyword is empty after stripping whitespace.
         """
-        raise NotImplementedError
+        if not isinstance(keyword, str):
+            raise TypeError("keyword must be a string.")
+
+        keyword = keyword.strip()
+        if not keyword:
+            raise ValueError("keyword cannot be empty.")
+
+        normalized_keyword = keyword.casefold()
+        data = self._storage_service.load_data()
+        products = data["products"]
+        matching_products: list[Product] = []
+
+        for product_data in products:
+            searchable_values = (
+                product_data.get("id", ""),
+                product_data.get("name", ""),
+                product_data.get("category", ""),
+                product_data.get("supplier", ""),
+            )
+            if any(
+                normalized_keyword in str(value).casefold()
+                for value in searchable_values
+            ):
+                matching_products.append(Product.from_dict(product_data))
+
+        return matching_products
 
     def update_stock(self, product_id: str, quantity: int) -> None:
         """Update the stock quantity for a product.
@@ -158,6 +185,32 @@ class InventoryService:
             quantity: New stock quantity for the product.
 
         Raises:
-            NotImplementedError: This interface has not been implemented yet.
+            TypeError: If product_id is not a string or quantity is not an integer.
+            ValueError: If product_id is empty, quantity is negative, or the
+                product does not exist.
         """
-        raise NotImplementedError
+        if not isinstance(product_id, str):
+            raise TypeError("product_id must be a string.")
+
+        product_id = product_id.strip()
+        if not product_id:
+            raise ValueError("product_id cannot be empty.")
+
+        if isinstance(quantity, bool) or not isinstance(quantity, int):
+            raise TypeError("quantity must be an integer.")
+        if quantity < 0:
+            raise ValueError("quantity must be greater than or equal to 0.")
+
+        data = self._storage_service.load_data()
+        products = data["products"]
+
+        for index, product_data in enumerate(products):
+            if product_data.get("id") == product_id:
+                product = Product.from_dict(product_data)
+                product.quantity = quantity
+                product.update_timestamp()
+                products[index] = product.to_dict()
+                self._storage_service.save_data(data)
+                return
+
+        raise ValueError(f"Product with ID '{product_id}' does not exist.")
