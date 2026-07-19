@@ -17,8 +17,10 @@ class InventoryService:
             TypeError: If storage_service is not a StorageService instance.
         """
         if not isinstance(storage_service, StorageService):
-            raise TypeError(f"storage_service must be a StorageService instance, "
-                            f"got {type(storage_service).__name__}.")
+            raise TypeError(
+                "storage_service must be a StorageService instance, "
+                f"got {type(storage_service).__name__}."
+            )
 
         self._storage_service = storage_service
 
@@ -38,7 +40,7 @@ class InventoryService:
         data = self._storage_service.load_data()
         products = data["products"]
 
-        if any(existing_product["id"] == product.id for existing_product in products):
+        if any(existing_product.get("id") == product.id for existing_product in products):
             raise ValueError(f"Product with ID '{product.id}' already exists.")
 
         products.append(product.to_dict())
@@ -54,9 +56,23 @@ class InventoryService:
             The matching product, or None when no product has the identifier.
 
         Raises:
-            NotImplementedError: This interface has not been implemented yet.
+            TypeError: If product_id is not a string.
+            ValueError: If product_id is empty after stripping whitespace.
         """
-        raise NotImplementedError
+        if not isinstance(product_id, str):
+            raise TypeError("product_id must be a string.")
+
+        product_id = product_id.strip()
+        if not product_id:
+            raise ValueError("product_id cannot be empty.")
+
+        data = self._storage_service.load_data()
+        products = data["products"]
+        for product_data in products:
+            if product_data.get("id") == product_id:
+                return Product.from_dict(product_data)
+
+        return None
 
     def get_all_products(self) -> list[Product]:
         """Retrieve all products in the inventory.
