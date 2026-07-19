@@ -79,11 +79,9 @@ class InventoryService:
 
         Returns:
             All products currently stored in the inventory.
-
-        Raises:
-            NotImplementedError: This interface has not been implemented yet.
         """
-        raise NotImplementedError
+        data = self._storage_service.load_data()
+        return [Product.from_dict(product_data) for product_data in data["products"]]
 
     def update_product(self, product: Product) -> None:
         """Update an existing product in the inventory.
