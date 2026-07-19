@@ -114,9 +114,27 @@ class InventoryService:
             product_id: Unique identifier of the product to remove.
 
         Raises:
-            NotImplementedError: This interface has not been implemented yet.
+            TypeError: If product_id is not a string.
+            ValueError: If product_id is empty after stripping whitespace or no
+                product exists with the specified identifier.
         """
-        raise NotImplementedError
+        if not isinstance(product_id, str):
+            raise TypeError("product_id must be a string.")
+
+        product_id = product_id.strip()
+        if not product_id:
+            raise ValueError("product_id cannot be empty.")
+
+        data = self._storage_service.load_data()
+        products = data["products"]
+
+        for index, product_data in enumerate(products):
+            if product_data.get("id") == product_id:
+                del products[index]
+                self._storage_service.save_data(data)
+                return
+
+        raise ValueError(f"Product with ID '{product_id}' does not exist.")
 
     def search_products(self, keyword: str) -> list[Product]:
         """Find products that match a keyword.
