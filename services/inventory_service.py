@@ -90,9 +90,22 @@ class InventoryService:
             product: Product containing the updated data.
 
         Raises:
-            NotImplementedError: This interface has not been implemented yet.
+            TypeError: If product is not an instance of Product.
+            ValueError: If no product exists with the same identifier.
         """
-        raise NotImplementedError
+        if not isinstance(product, Product):
+            raise TypeError("product must be an instance of Product.")
+
+        data = self._storage_service.load_data()
+        products = data["products"]
+
+        for index, existing_product in enumerate(products):
+            if existing_product.get("id") == product.id:
+                products[index] = product.to_dict()
+                self._storage_service.save_data(data)
+                return
+
+        raise ValueError(f"Product with ID '{product.id}' does not exist.")
 
     def delete_product(self, product_id: str) -> None:
         """Remove a product from the inventory.
