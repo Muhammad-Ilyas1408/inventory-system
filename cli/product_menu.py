@@ -2,7 +2,7 @@
 
 from collections.abc import Callable
 
-from cli.display import display_product
+from cli.display import display_heading, display_product
 from cli.input_helpers import prompt_text
 from cli.menu import display_menu, get_selection, run_action
 from models.product import Product
@@ -37,6 +37,7 @@ def view_products(service: InventoryService) -> None:
     if not products:
         print("No products found.")
         return
+    display_heading("Products")
     for product in products:
         display_product(product)
 

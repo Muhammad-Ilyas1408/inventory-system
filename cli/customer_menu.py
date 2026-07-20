@@ -2,7 +2,7 @@
 
 from collections.abc import Callable
 
-from cli.display import display_customer
+from cli.display import display_customer, display_heading
 from cli.input_helpers import prompt_text
 from cli.menu import display_menu, get_selection, run_action
 from models.customer import Customer
@@ -37,6 +37,7 @@ def view_customers(service: CustomerService) -> None:
     if not customers:
         print("No customers found.")
         return
+    display_heading("Customers")
     for customer in customers:
         display_customer(customer)
 

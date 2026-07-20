@@ -17,16 +17,20 @@ def display_menu(title: str, options: list[tuple[str, str]]) -> None:
         print(f"{option}. {description}")
 
 
-def get_selection(valid_options: set[str]) -> str | None:
+def get_selection(
+    valid_options: set[str],
+    prompt: str = "Select an option: ",
+) -> str | None:
     """Read and validate a menu selection.
 
     Args:
         valid_options: Permitted selection values.
+        prompt: Text displayed when requesting the selection.
 
     Returns:
         The validated selection, or None when the input is invalid.
     """
-    selection = input("Select an option: ").strip()
+    selection = input(prompt).strip()
     if selection not in valid_options:
         print("Invalid selection. Please choose a listed option.")
         return None

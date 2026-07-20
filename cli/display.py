@@ -6,6 +6,41 @@ from models.order import Order
 from models.product import Product
 
 
+def display_heading(title: str) -> None:
+    """Display a section heading.
+
+    Args:
+        title: Text displayed in the heading.
+    """
+    print("\n" + "-" * 40)
+    print(title)
+    print("-" * 40)
+
+
+def display_customer_selection(customers: list[Customer]) -> None:
+    """Display customers as numbered order-creation choices.
+
+    Args:
+        customers: Customers available for selection.
+    """
+    display_heading("Available Customers")
+    for index, customer in enumerate(customers, start=1):
+        print(f"\n{index}. {customer.id} - {customer.full_name}")
+
+
+def display_product_selection(products: list[Product]) -> None:
+    """Display products as numbered order-creation choices.
+
+    Args:
+        products: Products available for selection.
+    """
+    display_heading("Available Products")
+    for index, product in enumerate(products, start=1):
+        print(f"\n{index}. {product.id} - {product.name}")
+        print(f"   Price: {product.price:.2f}")
+        print(f"   Stock: {product.quantity}")
+
+
 def display_product(product: Product) -> None:
     """Display a product in a readable format.
 

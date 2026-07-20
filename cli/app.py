@@ -30,7 +30,11 @@ def run() -> None:
     actions: dict[str, Callable[[], None]] = {
         "1": lambda: product_menu(inventory_service),
         "2": lambda: customer_menu(customer_service),
-        "3": lambda: order_menu(order_service),
+        "3": lambda: order_menu(
+            order_service,
+            customer_service,
+            inventory_service,
+        ),
         "4": lambda: invoice_menu(invoice_service),
         "5": lambda: report_menu(report_service),
     }
