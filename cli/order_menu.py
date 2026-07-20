@@ -121,6 +121,7 @@ def create_order(
     )
     service.create_order(order)
     print("Order created successfully.")
+    print("Invoice generated successfully.")
 
 
 def view_orders(service: OrderService) -> None:

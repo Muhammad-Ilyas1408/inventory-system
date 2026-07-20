@@ -12,6 +12,7 @@ from models.order import Order
 from models.order_item import OrderItem
 from models.product import Product
 from services.inventory_service import InventoryService
+from services.invoice_service import InvoiceService
 from services.order_service import OrderService
 from services.storage_service import StorageService
 
@@ -37,12 +38,19 @@ def inventory_service(storage_service: StorageService) -> InventoryService:
 
 
 @pytest.fixture
+def invoice_service(storage_service: StorageService) -> InvoiceService:
+    """Provide an InvoiceService backed by temporary storage."""
+    return InvoiceService(storage_service)
+
+
+@pytest.fixture
 def order_service(
     storage_service: StorageService,
     inventory_service: InventoryService,
+    invoice_service: InvoiceService,
 ) -> OrderService:
     """Provide an OrderService backed by temporary storage."""
-    return OrderService(storage_service, inventory_service)
+    return OrderService(storage_service, inventory_service, invoice_service)
 
 
 def create_product(
@@ -133,12 +141,14 @@ def seed_database(
 def test_init_accepts_service_dependencies(
     storage_service: StorageService,
     inventory_service: InventoryService,
+    invoice_service: InvoiceService,
 ) -> None:
-    """Accept valid storage and inventory service dependencies."""
-    service = OrderService(storage_service, inventory_service)
+    """Accept valid storage, inventory, and invoice service dependencies."""
+    service = OrderService(storage_service, inventory_service, invoice_service)
 
     assert service._storage_service is storage_service
     assert service._inventory_service is inventory_service
+    assert service._invoice_service is invoice_service
 
 
 def test_init_raises_type_error_for_invalid_storage_service() -> None:
@@ -153,6 +163,15 @@ def test_init_raises_type_error_for_invalid_inventory_service(
     """Reject a dependency that is not an InventoryService."""
     with pytest.raises(TypeError, match="InventoryService"):
         OrderService(storage_service, object())
+
+
+def test_init_raises_type_error_for_invalid_invoice_service(
+    storage_service: StorageService,
+    inventory_service: InventoryService,
+) -> None:
+    """Reject an invoice service dependency with an invalid type."""
+    with pytest.raises(TypeError, match="InvoiceService"):
+        OrderService(storage_service, inventory_service, object())
 
 
 def test_create_order_persists_order_and_deducts_inventory(
@@ -173,6 +192,31 @@ def test_create_order_persists_order_and_deducts_inventory(
     assert stored_order.updated_at > TIMESTAMP
     assert stored_product.quantity == 8
     assert stored_product.updated_at > TIMESTAMP
+
+
+def test_create_order_generates_invoice_from_order_and_customer_data(
+    order_service: OrderService,
+    storage_service: StorageService,
+) -> None:
+    """Generate a complete invoice after successfully creating an order."""
+    customer = create_customer()
+    order = create_order()
+    seed_database(storage_service, [customer], [create_product()])
+    before_creation = datetime.now()
+
+    order_service.create_order(order)
+
+    data = storage_service.load_data()
+    invoice = data["invoices"][0]
+    issued_at = datetime.fromisoformat(invoice["issued_at"])
+    assert invoice["id"] == "INV001"
+    assert invoice["order_id"] == order.id
+    assert invoice["customer_name"] == customer.full_name
+    assert invoice["customer_email"] == customer.email
+    assert invoice["items"] == [item.to_dict() for item in order.items]
+    assert invoice["subtotal"] == order.total
+    assert invoice["total"] == order.total
+    assert issued_at >= before_creation
 
 
 def test_create_order_raises_value_error_for_duplicate_id(
@@ -234,6 +278,7 @@ def test_create_order_raises_value_error_for_insufficient_stock(
     data = storage_service.load_data()
     assert data["orders"] == []
     assert data["products"][0]["quantity"] == 1
+    assert data["invoices"] == []
 
 
 def test_create_order_deducts_exact_remaining_stock(

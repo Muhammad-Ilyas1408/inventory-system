@@ -1,6 +1,10 @@
 """Invoice business service for invoice-related operations."""
 
+from datetime import datetime
+
+from models.customer import Customer
 from models.invoice import Invoice
+from models.order import Order
 from services.storage_service import StorageService
 
 
@@ -24,6 +28,134 @@ class InvoiceService:
 
         self._storage_service = storage_service
 
+    def create_invoice_from_order(
+        self,
+        order: Order,
+        customer: Customer,
+    ) -> None:
+        """Create and persist an invoice using existing order data.
+
+        Args:
+            order: Persisted order that the invoice represents.
+            customer: Customer associated with the order.
+
+        Raises:
+            TypeError: If order or customer has an invalid type.
+            ValueError: If the order cannot be invoiced.
+        """
+        if not isinstance(order, Order):
+            raise TypeError("order must be an instance of Order.")
+        if not isinstance(customer, Customer):
+            raise TypeError("customer must be an instance of Customer.")
+
+        invoice = self._build_invoice(
+            self._generate_invoice_id(),
+            order,
+            customer,
+        )
+        self.create_invoice(invoice)
+
+    def create_invoice_for_order(self, invoice_id: str, order_id: str) -> None:
+        """Create an invoice for an existing order using stored data.
+
+        Args:
+            invoice_id: Unique identifier assigned to the new invoice.
+            order_id: Identifier of the order to invoice.
+
+        Raises:
+            TypeError: If invoice_id or order_id is not a string.
+            ValueError: If either identifier is empty, the order or customer is
+                missing, or the order already has an invoice.
+        """
+        if not isinstance(invoice_id, str):
+            raise TypeError("invoice_id must be a string.")
+        if not isinstance(order_id, str):
+            raise TypeError("order_id must be a string.")
+
+        invoice_id = invoice_id.strip()
+        order_id = order_id.strip()
+        if not invoice_id:
+            raise ValueError("invoice_id cannot be empty.")
+        if not order_id:
+            raise ValueError("order_id cannot be empty.")
+
+        data = self._storage_service.load_data()
+        order_data = next(
+            (
+                order
+                for order in data["orders"]
+                if order.get("id") == order_id
+            ),
+            None,
+        )
+        if order_data is None:
+            raise ValueError("Order not found.")
+        if any(invoice.get("order_id") == order_id for invoice in data["invoices"]):
+            raise ValueError(f"Invoice already exists for Order {order_id}.")
+
+        order = Order.from_dict(order_data)
+        customer_data = next(
+            (
+                customer
+                for customer in data["customers"]
+                if customer.get("id") == order.customer_id
+            ),
+            None,
+        )
+        if customer_data is None:
+            raise ValueError(
+                f"Customer with ID '{order.customer_id}' does not exist."
+            )
+
+        invoice = self._build_invoice(
+            invoice_id,
+            order,
+            Customer.from_dict(customer_data),
+        )
+        self.create_invoice(invoice)
+
+    def _build_invoice(
+        self,
+        invoice_id: str,
+        order: Order,
+        customer: Customer,
+    ) -> Invoice:
+        """Build an invoice from an order and its associated customer.
+
+        Args:
+            invoice_id: Unique identifier for the new invoice.
+            order: Order represented by the invoice.
+            customer: Customer associated with the order.
+
+        Returns:
+            An invoice populated with order and customer snapshot data.
+        """
+        return Invoice(
+            id=invoice_id,
+            order_id=order.id,
+            customer_name=customer.full_name,
+            customer_email=customer.email,
+            items=order.items,
+            subtotal=order.total,
+            total=order.total,
+            issued_at=datetime.now(),
+        )
+
+    def _generate_invoice_id(self) -> str:
+        """Generate the next sequential invoice identifier.
+
+        Returns:
+            The next available invoice identifier in the ``INV###`` sequence.
+        """
+        data = self._storage_service.load_data()
+        invoice_numbers = [
+            int(invoice["id"][3:])
+            for invoice in data["invoices"]
+            if invoice.get("id", "").startswith("INV")
+            and invoice["id"][3:].isdigit()
+        ]
+        return f"INV{max(invoice_numbers, default=0) + 1:03d}"
+
     def create_invoice(self, invoice: Invoice) -> None:
         """Create and persist an invoice for an existing order.
 
@@ -46,6 +178,14 @@ class InvoiceService:
             for existing_invoice in invoices
         ):
             raise ValueError(f"Invoice with ID '{invoice.id}' already exists.")
+
+        if any(
+            existing_invoice.get("order_id") == invoice.order_id
+            for existing_invoice in invoices
+        ):
+            raise ValueError(
+                f"Invoice already exists for Order {invoice.order_id}."
+            )
 
         if not any(order.get("id") == invoice.order_id for order in orders):
             raise ValueError(f"Order with ID '{invoice.order_id}' does not exist.")

@@ -1,12 +1,10 @@
 """Invoice-management presentation logic."""
 
 from collections.abc import Callable
-from datetime import datetime
 
 from cli.display import display_invoice
-from cli.input_helpers import prompt_order_items, prompt_text
+from cli.input_helpers import prompt_text
 from cli.menu import display_menu, get_selection, run_action
-from models.invoice import Invoice
 from services.invoice_service import InvoiceService
 
 
@@ -16,23 +14,13 @@ def create_invoice(service: InvoiceService) -> None:
     Args:
         service: Invoice service used to create the invoice.
     """
-    issued_at_text = prompt_text("Issued At (ISO format, blank for now)", "")
-    issued_at = (
-        datetime.fromisoformat(issued_at_text)
-        if issued_at_text
-        else datetime.now()
-    )
-    invoice = Invoice(
-        id=prompt_text("Invoice ID"),
-        order_id=prompt_text("Order ID"),
-        customer_name=prompt_text("Customer Name"),
-        customer_email=prompt_text("Customer Email"),
-        items=prompt_order_items(),
-        subtotal=float(prompt_text("Subtotal")),
-        total=float(prompt_text("Total")),
-        issued_at=issued_at,
-    )
-    service.create_invoice(invoice)
+    invoice_id = prompt_text("Invoice ID")
+    order_id = prompt_text("Order ID")
+    try:
+        service.create_invoice_for_order(invoice_id, order_id)
+    except ValueError as error:
+        print(error)
+        return
     print("Invoice created successfully.")
 
 

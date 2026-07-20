@@ -174,6 +174,58 @@ def test_create_invoice_persists_serialized_invoice(
     assert Invoice.from_dict(stored_data[0]) == invoice
 
 
+def test_create_invoice_for_order_uses_stored_order_and_customer_data(
+    invoice_service: InvoiceService,
+    storage_service: StorageService,
+) -> None:
+    """Create a complete invoice from an existing order and customer."""
+    customer = create_customer()
+    order = create_order()
+    seed_database(storage_service, [customer], [create_product()], [order])
+    before_creation = datetime.now()
+
+    invoice_service.create_invoice_for_order("INV001", order.id)
+
+    invoice = Invoice.from_dict(storage_service.load_data()["invoices"][0])
+    assert invoice.id == "INV001"
+    assert invoice.order_id == order.id
+    assert invoice.customer_name == customer.full_name
+    assert invoice.customer_email == customer.email
+    assert invoice.items == order.items
+    assert invoice.subtotal == order.total
+    assert invoice.total == order.total
+    assert invoice.issued_at >= before_creation
+
+
+def test_create_invoice_for_order_raises_value_error_for_missing_order(
+    invoice_service: InvoiceService,
+) -> None:
+    """Reject manual invoice creation when the requested order is missing."""
+    with pytest.raises(ValueError, match="Order not found"):
+        invoice_service.create_invoice_for_order("INV001", "ORD999")
+
+
+def test_create_invoice_for_order_rejects_duplicate_order_invoice(
+    invoice_service: InvoiceService,
+    storage_service: StorageService,
+) -> None:
+    """Prevent a second invoice from being created for the same order."""
+    order = create_order()
+    existing_invoice = create_invoice()
+    seed_database(
+        storage_service,
+        [create_customer()],
+        [create_product()],
+        [order],
+    )
+    invoice_service.create_invoice(existing_invoice)
+
+    with pytest.raises(ValueError, match="Invoice already exists for Order ORD001"):
+        invoice_service.create_invoice_for_order("INV002", order.id)
+
+    assert storage_service.load_data()["invoices"] == [existing_invoice.to_dict()]
+
+
 def test_create_invoice_raises_value_error_for_duplicate_id(
     invoice_service: InvoiceService,
     storage_service: StorageService,

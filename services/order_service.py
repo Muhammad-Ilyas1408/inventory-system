@@ -3,6 +3,7 @@
 from models.customer import Customer
 from models.order import Order
 from services.inventory_service import InventoryService
+from services.invoice_service import InvoiceService
 from services.storage_service import StorageService
 
 
@@ -13,12 +14,14 @@ class OrderService:
         self,
         storage_service: StorageService,
         inventory_service: InventoryService | None = None,
+        invoice_service: InvoiceService | None = None,
     ) -> None:
         """Initialize the service with its persistence dependency.
 
         Args:
             storage_service: Service used to persist order data.
             inventory_service: Service used to manage product inventory.
+            invoice_service: Service used to generate order invoices.
 
         Raises:
             TypeError: If a dependency has an invalid type.
@@ -39,6 +42,15 @@ class OrderService:
             )
 
         self._inventory_service = inventory_service
+        if invoice_service is None:
+            invoice_service = InvoiceService(storage_service)
+        if not isinstance(invoice_service, InvoiceService):
+            raise TypeError(
+                "invoice_service must be an InvoiceService instance, "
+                f"got {type(invoice_service).__name__}."
+            )
+
+        self._invoice_service = invoice_service
 
     def create_order(self, order: Order) -> None:
         """Create an order and deduct the required inventory quantities.
@@ -71,7 +83,7 @@ class OrderService:
         )
         if customer_data is None:
             raise ValueError(f"Customer with ID '{order.customer_id}' does not exist.")
-        Customer.from_dict(customer_data)
+        customer = Customer.from_dict(customer_data)
 
         self._inventory_service.deduct_stock(order.items)
 
@@ -80,6 +92,7 @@ class OrderService:
         orders = data["orders"]
         orders.append(order.to_dict())
         self._storage_service.save_data(data)
+        self._invoice_service.create_invoice_from_order(order, customer)
 
     def get_order_by_id(self, order_id: str) -> Order | None:
         """Retrieve an order by its unique identifier.
