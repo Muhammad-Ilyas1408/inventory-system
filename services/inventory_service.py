@@ -1,5 +1,6 @@
 """Inventory business service interfaces for product operations."""
 
+from models.order_item import OrderItem
 from models.product import Product
 from services.storage_service import StorageService
 
@@ -40,7 +41,10 @@ class InventoryService:
         data = self._storage_service.load_data()
         products = data["products"]
 
-        if any(existing_product.get("id") == product.id for existing_product in products):
+        if any(
+            existing_product.get("id") == product.id
+            for existing_product in products
+        ):
             raise ValueError(f"Product with ID '{product.id}' already exists.")
 
         products.append(product.to_dict())
@@ -214,3 +218,88 @@ class InventoryService:
                 return
 
         raise ValueError(f"Product with ID '{product_id}' does not exist.")
+
+    def deduct_stock(self, items: list[OrderItem]) -> None:
+        """Deduct the quantities requested by order items.
+
+        Args:
+            items: Order items whose quantities should be deducted.
+
+        Raises:
+            TypeError: If items is not a list of OrderItem instances.
+            ValueError: If an item requests an invalid quantity, a product does
+                not exist, or available inventory is insufficient.
+        """
+        self._adjust_stock_for_items(items, -1)
+
+    def restore_stock(self, items: list[OrderItem]) -> None:
+        """Restore the quantities associated with order items.
+
+        Args:
+            items: Order items whose quantities should be restored.
+
+        Raises:
+            TypeError: If items is not a list of OrderItem instances.
+            ValueError: If an item requests an invalid quantity or a product
+                does not exist.
+        """
+        self._adjust_stock_for_items(items, 1)
+
+    def _adjust_stock_for_items(
+        self,
+        items: list[OrderItem],
+        direction: int,
+    ) -> None:
+        """Apply a validated stock adjustment for all supplied order items.
+
+        Args:
+            items: Order items used to determine stock quantities.
+            direction: Multiplier that indicates deduction or restoration.
+
+        Raises:
+            TypeError: If items is not a list of OrderItem instances.
+            ValueError: If an item requests an invalid quantity, a product does
+                not exist, or available inventory is insufficient.
+        """
+        if not isinstance(items, list):
+            raise TypeError("items must be a list of OrderItem instances.")
+        if any(not isinstance(item, OrderItem) for item in items):
+            raise TypeError("items must be a list of OrderItem instances.")
+
+        requested_quantities: dict[str, int] = {}
+        for item in items:
+            if item.quantity <= 0:
+                raise ValueError(
+                    "Order item quantity must be greater than 0."
+                )
+            requested_quantities[item.product_id] = (
+                requested_quantities.get(item.product_id, 0) + item.quantity
+            )
+
+        data = self._storage_service.load_data()
+        products = data["products"]
+        product_records = {
+            product_data.get("id"): (index, Product.from_dict(product_data))
+            for index, product_data in enumerate(products)
+        }
+
+        for product_id, requested_quantity in requested_quantities.items():
+            product_record = product_records.get(product_id)
+            if product_record is None:
+                raise ValueError(f"Product with ID '{product_id}' does not exist.")
+
+            _, product = product_record
+            if direction < 0 and product.quantity < requested_quantity:
+                raise ValueError(
+                    f"Insufficient stock for product '{product.name}'. "
+                    f"Available: {product.quantity}. "
+                    f"Requested: {requested_quantity}."
+                )
+
+        for product_id, requested_quantity in requested_quantities.items():
+            index, product = product_records[product_id]
+            product.quantity += direction * requested_quantity
+            product.update_timestamp()
+            products[index] = product.to_dict()
+
+        self._storage_service.save_data(data)

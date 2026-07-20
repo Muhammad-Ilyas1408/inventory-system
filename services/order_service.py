@@ -2,22 +2,26 @@
 
 from models.customer import Customer
 from models.order import Order
-from models.order_item import OrderItem
-from models.product import Product
+from services.inventory_service import InventoryService
 from services.storage_service import StorageService
 
 
 class OrderService:
     """Coordinate order-related business operations."""
 
-    def __init__(self, storage_service: StorageService) -> None:
+    def __init__(
+        self,
+        storage_service: StorageService,
+        inventory_service: InventoryService | None = None,
+    ) -> None:
         """Initialize the service with its persistence dependency.
 
         Args:
             storage_service: Service used to persist order data.
+            inventory_service: Service used to manage product inventory.
 
         Raises:
-            TypeError: If storage_service is not a StorageService instance.
+            TypeError: If a dependency has an invalid type.
         """
         if not isinstance(storage_service, StorageService):
             raise TypeError(
@@ -26,6 +30,15 @@ class OrderService:
             )
 
         self._storage_service = storage_service
+        if inventory_service is None:
+            inventory_service = InventoryService(storage_service)
+        if not isinstance(inventory_service, InventoryService):
+            raise TypeError(
+                "inventory_service must be an InventoryService instance, "
+                f"got {type(inventory_service).__name__}."
+            )
+
+        self._inventory_service = inventory_service
 
     def create_order(self, order: Order) -> None:
         """Create an order and deduct the required inventory quantities.
@@ -44,7 +57,6 @@ class OrderService:
         data = self._storage_service.load_data()
         orders = data["orders"]
         customers = data["customers"]
-        products = data["products"]
 
         if any(existing_order.get("id") == order.id for existing_order in orders):
             raise ValueError(f"Order with ID '{order.id}' already exists.")
@@ -61,34 +73,11 @@ class OrderService:
             raise ValueError(f"Customer with ID '{order.customer_id}' does not exist.")
         Customer.from_dict(customer_data)
 
-        product_records: dict[str, tuple[int, Product]] = {}
-        for index, product_data in enumerate(products):
-            product = Product.from_dict(product_data)
-            product_records[product.id] = (index, product)
-
-        order_items: list[OrderItem] = order.items
-        requested_quantities: dict[str, int] = {}
-        for item in order_items:
-            requested_quantities[item.product_id] = (
-                requested_quantities.get(item.product_id, 0) + item.quantity
-            )
-
-        for product_id, requested_quantity in requested_quantities.items():
-            product_record = product_records.get(product_id)
-            if product_record is None:
-                raise ValueError(f"Product with ID '{product_id}' does not exist.")
-
-            _, product = product_record
-            if product.quantity < requested_quantity:
-                raise ValueError(f"Insufficient stock for product ID '{product_id}'.")
-
-        for product_id, requested_quantity in requested_quantities.items():
-            index, product = product_records[product_id]
-            product.quantity -= requested_quantity
-            product.update_timestamp()
-            products[index] = product.to_dict()
+        self._inventory_service.deduct_stock(order.items)
 
         order.update_timestamp()
+        data = self._storage_service.load_data()
+        orders = data["orders"]
         orders.append(order.to_dict())
         self._storage_service.save_data(data)
 
@@ -174,7 +163,6 @@ class OrderService:
 
         data = self._storage_service.load_data()
         orders = data["orders"]
-        products = data["products"]
 
         order_index = next(
             (
@@ -188,27 +176,10 @@ class OrderService:
             raise ValueError(f"Order with ID '{order_id}' does not exist.")
 
         order = Order.from_dict(orders[order_index])
-        product_records: dict[str, tuple[int, Product]] = {}
-        for index, product_data in enumerate(products):
-            product = Product.from_dict(product_data)
-            product_records[product.id] = (index, product)
+        self._inventory_service.restore_stock(order.items)
 
-        restored_quantities: dict[str, int] = {}
-        for item in order.items:
-            restored_quantities[item.product_id] = (
-                restored_quantities.get(item.product_id, 0) + item.quantity
-            )
-
-        for product_id in restored_quantities:
-            if product_id not in product_records:
-                raise ValueError(f"Product with ID '{product_id}' does not exist.")
-
-        for product_id, restored_quantity in restored_quantities.items():
-            index, product = product_records[product_id]
-            product.quantity += restored_quantity
-            product.update_timestamp()
-            products[index] = product.to_dict()
-
+        data = self._storage_service.load_data()
+        orders = data["orders"]
         del orders[order_index]
         self._storage_service.save_data(data)
 

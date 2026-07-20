@@ -23,7 +23,7 @@ def run() -> None:
 
     inventory_service = InventoryService(storage_service)
     customer_service = CustomerService(storage_service)
-    order_service = OrderService(storage_service)
+    order_service = OrderService(storage_service, inventory_service)
     invoice_service = InvoiceService(storage_service)
     report_service = ReportService(storage_service)
 
