@@ -38,6 +38,7 @@ def run() -> None:
             order_service,
             customer_service,
             inventory_service,
+            invoice_service,
         ),
         "4": lambda: invoice_menu(invoice_service),
         "5": lambda: report_menu(report_service),

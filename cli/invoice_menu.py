@@ -2,7 +2,7 @@
 
 from collections.abc import Callable
 
-from cli.display import display_invoice
+from cli.display import display_error, display_heading, display_invoice
 from cli.input_helpers import prompt_text
 from cli.menu import display_menu, get_selection, run_action
 from services.invoice_service import InvoiceService
@@ -19,7 +19,7 @@ def create_invoice(service: InvoiceService) -> None:
     try:
         service.create_invoice_for_order(invoice_id, order_id)
     except ValueError as error:
-        print(error)
+        display_error(str(error))
         return
     print("Invoice created successfully.")
 
@@ -34,6 +34,7 @@ def view_invoices(service: InvoiceService) -> None:
     if not invoices:
         print("No invoices found.")
         return
+    display_heading("Invoices")
     for invoice in invoices:
         display_invoice(invoice)
 
@@ -48,6 +49,7 @@ def search_invoices(service: InvoiceService) -> None:
     if not invoices:
         print("No matching invoices found.")
         return
+    display_heading("Invoices")
     for invoice in invoices:
         display_invoice(invoice)
 
@@ -62,6 +64,7 @@ def view_invoice_by_order(service: InvoiceService) -> None:
     if invoice is None:
         print("No invoice found for this order.")
         return
+    display_heading("Invoices")
     display_invoice(invoice)
 
 
@@ -75,6 +78,7 @@ def view_customer_invoices(service: InvoiceService) -> None:
     if not invoices:
         print("No invoices found for this customer.")
         return
+    display_heading("Invoices")
     for invoice in invoices:
         display_invoice(invoice)
 

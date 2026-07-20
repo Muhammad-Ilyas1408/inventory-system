@@ -4,7 +4,9 @@ from collections.abc import Callable
 
 from cli.display import (
     display_customer_selection,
+    display_heading,
     display_order,
+    display_order_confirmation,
     display_product_selection,
 )
 from cli.input_helpers import prompt_text
@@ -16,6 +18,7 @@ from models.order_item import OrderItem
 from models.product import Product
 from services.customer_service import CustomerService
 from services.inventory_service import InventoryService
+from services.invoice_service import InvoiceService
 from services.order_service import OrderService
 
 
@@ -98,6 +101,7 @@ def create_order(
     service: OrderService,
     customer_service: CustomerService,
     inventory_service: InventoryService,
+    invoice_service: InvoiceService,
 ) -> None:
     """Collect and create an order through OrderService.
 
@@ -105,6 +109,7 @@ def create_order(
         service: Order service used to create the order.
         customer_service: Customer service used to select a customer.
         inventory_service: Inventory service used to select products.
+        invoice_service: Invoice service used to retrieve the generated invoice.
     """
     order_id = prompt_text("Order ID")
     customer = select_customer(customer_service)
@@ -120,8 +125,9 @@ def create_order(
         status=OrderStatus.PENDING,
     )
     service.create_order(order)
-    print("Order created successfully.")
-    print("Invoice generated successfully.")
+    invoice = invoice_service.get_invoice_by_order(order.id)
+    if invoice is not None:
+        display_order_confirmation(order, customer, invoice)
 
 
 def view_orders(service: OrderService) -> None:
@@ -134,6 +140,7 @@ def view_orders(service: OrderService) -> None:
     if not orders:
         print("No orders found.")
         return
+    display_heading("Orders")
     for order in orders:
         display_order(order)
 
@@ -148,6 +155,7 @@ def search_orders(service: OrderService) -> None:
     if not orders:
         print("No matching orders found.")
         return
+    display_heading("Orders")
     for order in orders:
         display_order(order)
 
@@ -162,6 +170,7 @@ def view_customer_orders(service: OrderService) -> None:
     if not orders:
         print("No orders found for this customer.")
         return
+    display_heading("Orders")
     for order in orders:
         display_order(order)
 
@@ -190,6 +199,7 @@ def order_menu(
     service: OrderService,
     customer_service: CustomerService,
     inventory_service: InventoryService,
+    invoice_service: InvoiceService,
 ) -> None:
     """Run the order management menu.
 
@@ -197,9 +207,15 @@ def order_menu(
         service: Order service used by menu actions.
         customer_service: Customer service used by order creation.
         inventory_service: Inventory service used by order creation.
+        invoice_service: Invoice service used by order creation.
     """
     actions: dict[str, Callable[[], None]] = {
-        "1": lambda: create_order(service, customer_service, inventory_service),
+        "1": lambda: create_order(
+            service,
+            customer_service,
+            inventory_service,
+            invoice_service,
+        ),
         "2": lambda: view_orders(service),
         "3": lambda: search_orders(service),
         "4": lambda: view_customer_orders(service),

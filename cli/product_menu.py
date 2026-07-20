@@ -52,6 +52,7 @@ def search_products(service: InventoryService) -> None:
     if not products:
         print("No matching products found.")
         return
+    display_heading("Products")
     for product in products:
         display_product(product)
 

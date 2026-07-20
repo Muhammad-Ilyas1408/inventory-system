@@ -2,6 +2,8 @@
 
 from collections.abc import Callable
 
+from cli.display import display_error, display_heading
+
 
 def display_menu(title: str, options: list[tuple[str, str]]) -> None:
     """Display a formatted menu.
@@ -10,9 +12,7 @@ def display_menu(title: str, options: list[tuple[str, str]]) -> None:
         title: Heading displayed above the menu options.
         options: Menu option identifiers and descriptions.
     """
-    print("\n" + "=" * 41)
-    print(title)
-    print("=" * 41)
+    display_heading(title)
     for option, description in options:
         print(f"{option}. {description}")
 
@@ -46,6 +46,6 @@ def run_action(action: Callable[[], None]) -> None:
     try:
         action()
     except (TypeError, ValueError) as error:
-        print(f"Error: {error}")
+        display_error(str(error))
     except Exception:
         print("An unexpected error occurred. Please try again.")

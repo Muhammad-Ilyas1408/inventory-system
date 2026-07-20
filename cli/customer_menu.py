@@ -52,6 +52,7 @@ def search_customers(service: CustomerService) -> None:
     if not customers:
         print("No matching customers found.")
         return
+    display_heading("Customers")
     for customer in customers:
         display_customer(customer)
 
