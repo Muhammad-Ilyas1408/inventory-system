@@ -5,11 +5,27 @@
 ![Tests](https://img.shields.io/badge/tests-214%20passing-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-lightgrey)
 
-A modular **Inventory Management System** built with Python that demonstrates production-oriented software engineering practices. The application provides product, customer, inventory, order, invoice, and reporting workflows through a clean, testable command-line interface.
+A production-oriented **Inventory Management System** built with Python that demonstrates clean software architecture, modular application design, object-oriented programming, automated testing, and business workflow implementation.
+
+The application provides product, customer, inventory, order, invoice, and reporting workflows through a clean, testable command-line interface.
 
 **Version:** 1.0.0  
 **Python:** 3.11+  
-**Test Status:** ✅ All 214 automated tests are passing.
+**Test Status:** All 214 automated tests are passing.
+
+---
+
+## Project Highlights
+
+- Production-oriented Python engineering project
+- Clean layered architecture
+- Modular service-based design
+- Object-Oriented Programming (OOP)
+- Automated inventory management
+- Automatic invoice generation
+- Duplicate invoice prevention
+- Comprehensive automated testing
+- Well-documented project structure
 
 ---
 
@@ -156,7 +172,7 @@ git clone https://github.com/Muhammad-Ilyas1408/inventory-system.git
 cd inventory-system
 ```
 
-Create a virtual environment and install the project dependencies:
+Create the virtual environment and install the project dependencies:
 
 ```bash
 uv venv
@@ -191,7 +207,7 @@ The project includes automated unit tests covering:
 
 **Current Status**
 
-- ✅ All 214 automated tests are passing.
+- All 214 automated tests are passing.
 
 ---
 
@@ -239,7 +255,3 @@ Potential future enhancements include:
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
 ---
-
-**Developed by Muhammad Ilyas**
-
-Built as a production-oriented Python software engineering portfolio project.
